@@ -1,26 +1,86 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-paper: #fdf6e3;
+  --color-paper-dark: #f5ecd7;
+  --color-ink: #3d3226;
+  --color-ink-light: #6b5d4f;
+  --color-accent: #b8860b;
+  --color-accent-red: #c41e3a;
+  --color-accent-green: #2d5016;
+  --color-accent-gold: #d4a017;
+  --color-border: #d4c5a9;
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans), serif;
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+.ink-text {
+  color: var(--color-ink);
+}
+
+.ink-light {
+  color: var(--color-ink-light);
+}
+
+.accent-text {
+  color: var(--color-accent);
+}
+
+.paper-card {
+  background: white;
+  border: 1px solid var(--color-border);
+  box-shadow: 0 2px 8px rgba(61, 50, 38, 0.08);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #b8860b, #d4a017);
+  color: white;
+  border: none;
+  padding: 0.75rem 2rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-primary:hover {
+  background: linear-gradient(135deg, #9a6f0a, #b8860b);
+  box-shadow: 0 4px 12px rgba(184, 134, 11, 0.3);
+}
+
+.btn-primary:disabled {
+  background: #c4b99a;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.fengshui-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.fengshui-scrollbar::-webkit-scrollbar-track {
+  background: var(--color-paper-dark);
+  border-radius: 3px;
+}
+
+.fengshui-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 3px;
+}
+
+@keyframes pulse-gold {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.animate-pulse-gold {
+  animation: pulse-gold 2s ease-in-out infinite;
 }
