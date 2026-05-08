@@ -1,3 +1,5 @@
+import { readJsonResponse } from '@/lib/http/json'
+
 function isValidAddress(addr: string): boolean {
   if (!addr || addr.length > 200) return false
   if (/^https?:\/\//i.test(addr)) return false
@@ -50,7 +52,7 @@ async function geocode(address: string): Promise<{ lng: number; lat: number; for
   }
   const url = `https://restapi.amap.com/v3/geocode/geo?key=${amapKey}&address=${encodeURIComponent(address)}`
   const res = await fetch(url)
-  const data = await res.json()
+  const data = await readJsonResponse<{ status?: string; geocodes?: { location: string; formatted_address: string }[] }>(res, '高德地理编码 API')
   if (data.status !== '1' || !data.geocodes?.length) {
     throw new Error(`地址解析失败：${address}`)
   }
@@ -86,7 +88,7 @@ async function searchPOI(
       url = `https://restapi.amap.com/v3/place/around?key=${amapKey}&location=${lng},${lat}&radius=${radius}&keywords=${encodeURIComponent(keyword)}&offset=10&extensions=all`
     }
     const res = await fetch(url)
-    const data = await res.json()
+    const data = await readJsonResponse<{ status?: string; pois?: { name: string; type: string; distance: string; direction: string; address: string }[] }>(res, '高德周边搜索 API')
     if (data.status !== '1' || !data.pois?.length) return []
 
     return data.pois.map((poi: { name: string; type: string; distance: string; direction: string; address: string }) => ({

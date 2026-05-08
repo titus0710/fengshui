@@ -5,6 +5,8 @@ import { calculateFlyingStarChart, flyingStarToText } from '@/lib/fengshui/xuank
 import { canvasToPalaceMappings } from '@/lib/floorplan/editable'
 import type { EditableRoom, FloorplanCanvas } from '@/lib/floorplan/editable'
 
+export const maxDuration = 60
+
 export async function POST(request: Request) {
   try {
     const formData = await request.formData()

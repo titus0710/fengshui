@@ -37,6 +37,56 @@ const MOUNTAINS: { label: string; value: TwentyFourMountain; degree: number }[] 
   { label: '壬 (北偏西 345°)', value: '壬', degree: 345 },
 ]
 
+type ApiErrorPayload = {
+  error?: string
+}
+
+type RecognizeResponse = {
+  rooms: { name: string; type: string; bounds: { x: number; y: number; width: number; height: number }; notes: string }[]
+  direction: string
+  overallShape: string
+}
+
+async function parseApiResponse<T>(response: Response, fallbackMessage: string): Promise<T> {
+  const contentType = response.headers.get('content-type') || ''
+  const raw = await response.text()
+  const trimmed = raw.trim()
+
+  const tryParseJson = () => {
+    if (!trimmed) return null
+    if (!contentType.includes('application/json') && !trimmed.startsWith('{') && !trimmed.startsWith('[')) {
+      return null
+    }
+
+    try {
+      return JSON.parse(trimmed) as T
+    } catch {
+      return null
+    }
+  }
+
+  const parsed = tryParseJson()
+  if (parsed) {
+    if (!response.ok) {
+      const message = (parsed as ApiErrorPayload).error || fallbackMessage
+      throw new Error(message)
+    }
+    return parsed
+  }
+
+  const looksLikeHtml =
+    contentType.includes('text/html') ||
+    /^<!doctype html>/i.test(trimmed) ||
+    /^<html[\s>]/i.test(trimmed)
+
+  if (looksLikeHtml) {
+    throw new Error('接口返回了 HTML 页面而不是 JSON。请确认当前打开的是风水项目开发地址（通常为 localhost:3100），而不是其他占用 localhost:3000 的应用。')
+  }
+
+  const preview = trimmed.replace(/\s+/g, ' ').slice(0, 160)
+  throw new Error(preview || fallbackMessage)
+}
+
 export default function HomePage() {
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -48,7 +98,6 @@ export default function HomePage() {
   const [imageBase64, setImageBase64] = useState<string>('')
   const [address, setAddress] = useState('')
   const [editableCanvas, setEditableCanvas] = useState<FloorplanCanvas | null>(null)
-  const [floorplanData, setFloorplanData] = useState<any>(null)
 
   // 方向确认：向方就是窗户/阳台对着的方向
   const [facingDirection, setFacingDirection] = useState<TwentyFourMountain>('午')
@@ -89,22 +138,19 @@ export default function HomePage() {
     setProgress('正在识别户型结构...')
 
     try {
-      const base64 = imageBase64 || imagePreview.split(',')[1]
       const formData = new FormData()
       formData.append('image', image)
 
       const response = await fetch('/api/recognize', {
         method: 'POST',
+        headers: {
+          Accept: 'application/json',
+        },
         body: formData,
       })
 
-      const data = await response.json()
+      const data = await parseApiResponse<RecognizeResponse>(response, '户型图识别失败')
 
-      if (!response.ok) {
-        throw new Error(data.error || '户型图识别失败')
-      }
-
-      setFloorplanData(data)
       const canvas = qwenRoomsToEditable(data.rooms, 600, 500)
       setEditableCanvas(canvas)
       setProgress('')
@@ -137,14 +183,13 @@ export default function HomePage() {
 
       const response = await fetch('/api/analyze', {
         method: 'POST',
+        headers: {
+          Accept: 'application/json',
+        },
         body: formData,
       })
 
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || '分析失败')
-      }
+      const data = await parseApiResponse(response, '分析失败')
 
       sessionStorage.setItem('analysisResult', JSON.stringify(data))
       router.push('/explore')
