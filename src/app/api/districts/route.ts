@@ -1,4 +1,5 @@
-const AMAP_KEY = process.env.AMAP_SERVICE_KEY
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 interface AmapDistrict {
   name: string
@@ -13,7 +14,10 @@ function extractDistricts(data: { districts?: AmapDistrict[] }): { name: string;
 }
 
 async function fetchDistricts(keywords?: string): Promise<{ name: string; adcode: string }[]> {
-  const params = new URLSearchParams({ key: AMAP_KEY!, subdistrict: '1' })
+  const amapKey = process.env.AMAP_SERVICE_KEY?.trim()
+  if (!amapKey) return []
+
+  const params = new URLSearchParams({ key: amapKey, subdistrict: '1' })
   if (keywords) params.set('keywords', keywords)
   const url = `https://restapi.amap.com/v3/config/district?${params.toString()}`
   const res = await fetch(url)
@@ -26,8 +30,9 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const level = searchParams.get('level')
   const adcode = searchParams.get('adcode')
+  const amapKey = process.env.AMAP_SERVICE_KEY?.trim()
 
-  if (!AMAP_KEY) {
+  if (!amapKey) {
     return Response.json({ districts: [] })
   }
 
