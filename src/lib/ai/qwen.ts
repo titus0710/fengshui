@@ -83,14 +83,64 @@ export async function recognizeFloorplan(input: {
     temperature: 0.1,
   })
 
-  const jsonMatch = content.match(/\{[\s\S]*\}/)
+  let jsonStr = content.trim()
+  const jsonMatch = jsonStr.match(/\{[\s\S]*\}/)
   if (!jsonMatch) {
-    throw new Error('模型返回格式无法解析为 JSON')
+    throw new Error(`模型返回格式无法解析为 JSON，原始内容：${jsonStr.substring(0, 300)}`)
+  }
+
+  jsonStr = jsonMatch[0]
+  const lastBrace = jsonStr.lastIndexOf('}')
+  if (lastBrace !== jsonStr.length - 1) {
+    jsonStr = jsonStr.substring(0, lastBrace + 1)
   }
 
   try {
-    return JSON.parse(jsonMatch[0])
-  } catch {
-    throw new Error(`JSON 解析失败: ${content.substring(0, 200)}`)
+    const parsed = JSON.parse(jsonStr)
+    if (parsed.overall_shape !== undefined && parsed.overallShape === undefined) {
+      parsed.overallShape = parsed.overall_shape
+      delete parsed.overall_shape
+    }
+    if (!parsed.rooms || !Array.isArray(parsed.rooms)) {
+      throw new Error('返回数据缺少 rooms 数组')
+    }
+    parsed.rooms = parsed.rooms.map((room: Record<string, unknown>, index: number) => {
+      const fixed: Record<string, unknown> = {
+        name: String(room.name || `房间${index + 1}`),
+        type: String(room.type || 'other'),
+        notes: String(room.notes || ''),
+      }
+      const b = room.bounds
+      if (b && typeof b === 'object') {
+        const bObj = b as Record<string, unknown>
+        if (typeof bObj.x === 'number') fixed.x = bObj.x
+        if (typeof bObj.y === 'number') fixed.y = bObj.y
+        if (typeof bObj.width === 'number') fixed.width = bObj.width
+        if (typeof bObj.height === 'number') fixed.height = bObj.height
+        if (fixed.x === undefined && !isNaN(Number(bObj.x))) fixed.x = Number(bObj.x)
+        if (fixed.y === undefined && !isNaN(Number(bObj.y))) fixed.y = Number(bObj.y)
+        if (fixed.width === undefined && !isNaN(Number(bObj.width))) fixed.width = Number(bObj.width)
+        if (fixed.height === undefined && !isNaN(Number(bObj.height))) fixed.height = Number(bObj.height)
+        if (fixed.x === undefined && fixed.y === undefined && fixed.width === undefined && fixed.height === undefined) {
+          const vals = Object.values(bObj).filter(v => typeof v === 'number')
+          if (vals.length >= 4) {
+            fixed.x = vals[0]; fixed.y = vals[1]; fixed.width = vals[2]; fixed.height = vals[3]
+          } else if (vals.length >= 2) {
+            fixed.width = vals[0] || 0.1; fixed.height = vals[1] || 0.1
+          }
+        }
+      }
+      fixed.bounds = {
+        x: Number(fixed.x) || 0,
+        y: Number(fixed.y) || 0,
+        width: Number(fixed.width) || 0.1,
+        height: Number(fixed.height) || 0.1,
+      }
+      return fixed
+    })
+    return parsed
+  } catch (parseError) {
+    const preview = jsonStr.substring(0, 500)
+    throw new Error(`JSON 解析失败: ${parseError instanceof Error ? parseError.message : '未知错误'}，内容预览：${preview}`)
   }
 }
