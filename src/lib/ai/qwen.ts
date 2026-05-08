@@ -62,27 +62,24 @@ const FLOORPLAN_SYSTEM_PROMPT = `你是一位专业的建筑图纸分析专家�
 4. 只输出 JSON，不要包含任何解释文字`
 
 function fixMalformedJson(str: string): string {
-  str = str.replace(/:\s*([0-9]+\.?[0-9]*)\s*,\s*([0-9]+\.?[0-9]*)\s*,/g, (_, n1, n2) => {
-    return `: ${n1}, "___v2": ${n2},`
+  str = str.replace(/"y":\s*([0-9.]+)\s*,\s*([0-9.]+)\s*,\s*([0-9.]+)\s*([,}])/g, (_, y, w, h, punct) => {
+    return `"y": ${y}, "width": ${w}, "height": ${h}${punct}`
   })
-  str = str.replace(/:\s*([0-9]+\.?[0-9]*)\s*,\s*([0-9]+\.?[0-9]*)\s*\}/g, (_, n1, n2) => {
-    return `: ${n1}, "___v2": ${n2}}`
+  str = str.replace(/"x":\s*([0-9.]+)\s*,\s*([0-9.]+)\s*,\s*"width/g, (_, x, y) => {
+    return `"x": ${x}, "y": ${y}, "width`
   })
-  str = str.replace(/x":\s*([0-9.]+)\s*,\s*([0-9.]+)\s*,\s*"width/g, (_, n1, n2) => {
-    return `x": ${n1}, "y": ${n2}, "width`
+  str = str.replace(/"x":\s*([0-9.]+)\s*,\s*([0-9.]+)\s*,\s*}/g, (_, x, y) => {
+    return `"x": ${x}, "y": ${y}}`
   })
-  str = str.replace(/y":\s*([0-9.]+)\s*,\s*([0-9.]+)\s*,\s*"width/g, (_, n1, n2) => {
-    return `y": ${n1}, "___h": ${n2}, "width`
+  str = str.replace(/"width":\s*([0-9.]+)\s*,\s*([0-9.]+)\s*,\s*"height/g, (_, w, h) => {
+    return `"width": ${w}, "height": ${h}, "height`
   })
-  str = str.replace(/width":\s*([0-9.]+)\s*,\s*([0-9.]+)\s*,\s*"height/g, (_, n1, n2) => {
-    return `width": ${n1}, "height": ${n2}, "height`
+  str = str.replace(/"width":\s*([0-9.]+)\s*,\s*([0-9.]+)\s*,\s*}/g, (_, w, h) => {
+    return `"width": ${w}, "height": ${h}}`
   })
-  str = str.replace(/height":\s*([0-9.]+)\s*,\s*([0-9.]+)\s*\}/g, (_, n1, n2) => {
-    return `height": ${n1}, "___h2": ${n2}}`
+  str = str.replace(/"height":\s*([0-9.]+)\s*,\s*([0-9.]+)\s*\}/g, (_, h1, h2) => {
+    return `"height": ${h1}, "___extra": ${h2}}`
   })
-  str = str.replace(/"___v2":/g, '"y":')
-  str = str.replace(/"___h":/g, '"height":')
-  str = str.replace(/"___h2":/g, '"height":')
   return str
 }
 
