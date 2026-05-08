@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import type { EditableRoom, FloorplanCanvas, Point } from '@/lib/floorplan/editable'
 import { addVertexToEdge, removeVertex, pointInPolygon } from '@/lib/floorplan/editable'
 
@@ -63,6 +63,9 @@ export default function InteractiveFloorplan({
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null)
   const [editMode, setEditMode] = useState<EditMode>('select')
   const [editingNameId, setEditingNameId] = useState<string | null>(null)
+  const [isCreatingRoom, setIsCreatingRoom] = useState(false)
+  const [createStart, setCreateStart] = useState<Point | null>(null)
+  const [createCurrent, setCreateCurrent] = useState<Point | null>(null)
   const [drag, setDrag] = useState<{
     mode: DragMode
     roomId: string
@@ -75,6 +78,13 @@ export default function InteractiveFloorplan({
 
   const svgRef = useRef<SVGSVGElement>(null)
   const nameInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (editingNameId && nameInputRef.current) {
+      nameInputRef.current.focus()
+      nameInputRef.current.select()
+    }
+  }, [editingNameId])
 
   const getSvgPoint = useCallback((clientX: number, clientY: number): Point => {
     if (!svgRef.current) return { x: 0, y: 0 }
@@ -111,6 +121,37 @@ export default function InteractiveFloorplan({
   const handleMouseDown = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
     if (e.button !== 0) return
     const pt = getSvgPoint(e.clientX, e.clientY)
+
+    if (isCreatingRoom) {
+      if (!createStart) {
+        setCreateStart(pt)
+        setCreateCurrent(pt)
+      } else {
+        const minX = Math.min(createStart.x, pt.x)
+        const minY = Math.min(createStart.y, pt.y)
+        const maxX = Math.max(createStart.x, pt.x)
+        const maxY = Math.max(createStart.y, pt.y)
+        const newRoom: EditableRoom = {
+          id: `room-${Date.now()}`,
+          name: `房间${canvas.rooms.length + 1}`,
+          type: 'other',
+          points: [
+            { x: minX, y: minY },
+            { x: maxX, y: minY },
+            { x: maxX, y: maxY },
+            { x: minX, y: maxY },
+          ],
+          color: '#f5e6d3',
+        }
+        onCanvasChange({ ...canvas, rooms: [...canvas.rooms, newRoom] })
+        setSelectedRoomId(newRoom.id)
+        setIsCreatingRoom(false)
+        setCreateStart(null)
+        setCreateCurrent(null)
+      }
+      return
+    }
+
     const currentRoom = canvas.rooms.find(r => r.id === selectedRoomId)
 
     if (currentRoom) {
@@ -154,11 +195,18 @@ export default function InteractiveFloorplan({
       }
     }
     setSelectedRoomId(null)
-  }, [canvas.rooms, selectedRoomId, editMode, getSvgPoint])
+  }, [canvas.rooms, selectedRoomId, editMode, getSvgPoint, isCreatingRoom, createStart, createCurrent, onCanvasChange])
 
   const handleMouseMove = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
-    if (!drag) return
+    if (!drag && !isCreatingRoom) return
     const pt = getSvgPoint(e.clientX, e.clientY)
+
+    if (isCreatingRoom && createStart) {
+      setCreateCurrent(pt)
+      return
+    }
+
+    if (!drag) return
     const dx = pt.x - drag.startMouseX
     const dy = pt.y - drag.startMouseY
 
@@ -206,7 +254,7 @@ export default function InteractiveFloorplan({
       ]
       onCanvasChange({ ...canvas, rooms: canvas.rooms.map(r => r.id === drag.roomId ? { ...r, points: newPts } : r) })
     }
-  }, [drag, canvas, getSvgPoint, onCanvasChange])
+  }, [drag, canvas, getSvgPoint, onCanvasChange, isCreatingRoom, createStart])
 
   const handleMouseUp = useCallback(() => setDrag(null), [])
 
@@ -241,19 +289,27 @@ export default function InteractiveFloorplan({
       <div className="text-center mb-2">
         <h2 className="text-lg font-bold ink-text">📐 户型图确认</h2>
         <p className="text-xs ink-light">
-          {editMode === 'select' && '点击选择房间 | 拖动移动'}
-          {editMode === 'rect' && '矩形模式：四角调整大小 | 拖动内部移动'}
-          {editMode === 'poly' && '异型模式：顶点拖动 | 双击边添加点 | 右键删除点'}
+          {isCreatingRoom && !createStart && '点击画布确定起始点'}
+          {isCreatingRoom && createStart && '移动鼠标预览，再次点击完成绘制'}
+          {!isCreatingRoom && editMode === 'select' && '点击选择房间 | 拖动移动'}
+          {!isCreatingRoom && editMode === 'rect' && '矩形模式：四角调整大小 | 拖动内部移动'}
+          {!isCreatingRoom && editMode === 'poly' && '异型模式：顶点拖动 | 双击边添加点 | 右键删除点'}
         </p>
       </div>
 
       <div className="flex items-center gap-2 mb-2">
         {(['select', 'rect', 'poly'] as EditMode[]).map(m => (
-          <button key={m} onClick={() => setEditMode(m)}
-            className={`px-3 py-1.5 rounded text-sm border ${editMode === m ? 'bg-accent text-white border-accent' : 'border-border ink-light hover:bg-paper'}`}>
+          <button key={m} onClick={() => { setEditMode(m); setIsCreatingRoom(false); setCreateStart(null); setCreateCurrent(null) }}
+            className={`px-3 py-1.5 rounded text-sm border ${editMode === m && !isCreatingRoom ? 'bg-accent text-white border-accent' : 'border-border ink-light hover:bg-paper'}`}>
             {m === 'select' ? '📦 选择' : m === 'rect' ? '⬜ 矩形' : '🔷 异型'}
           </button>
         ))}
+        <div className="w-px h-6 bg-border mx-1" />
+        <button
+          onClick={() => { setIsCreatingRoom(!isCreatingRoom); setEditMode('select'); setCreateStart(null); setCreateCurrent(null) }}
+          className={`px-3 py-1.5 rounded text-sm border ${isCreatingRoom ? 'bg-green-600 text-white border-green-600' : 'border-border ink-light hover:bg-paper text-green-700'}`}>
+          ➕ 添加房间
+        </button>
       </div>
 
       <div className="relative bg-white border-2 border-border rounded-xl overflow-hidden" style={{ width: canvas.width, height: canvas.height }}>
@@ -308,6 +364,20 @@ export default function InteractiveFloorplan({
               </g>
             )
           })}
+
+          {isCreatingRoom && createStart && createCurrent && (
+            <rect
+              x={Math.min(createStart.x, createCurrent.x)}
+              y={Math.min(createStart.y, createCurrent.y)}
+              width={Math.abs(createCurrent.x - createStart.x)}
+              height={Math.abs(createCurrent.y - createStart.y)}
+              fill="#f5e6d3"
+              stroke="#b8860b"
+              strokeWidth={2}
+              strokeDasharray="5,5"
+              opacity={0.7}
+            />
+          )}
         </svg>
       </div>
 
@@ -317,6 +387,29 @@ export default function InteractiveFloorplan({
           <span className="text-xs ink-light">({canvas.rooms.find(r => r.id === selectedRoomId)!.points.length}个顶点{!isRectangle(canvas.rooms.find(r => r.id === selectedRoomId)!.points) && editMode === 'rect' ? '，非矩形，仅可移动' : ''})</span>
           <button onClick={() => setEditingNameId(selectedRoomId)} className="text-xs text-accent hover:text-accent-dark underline">重命名</button>
           <button onClick={() => { onCanvasChange({ ...canvas, rooms: canvas.rooms.filter(r => r.id !== selectedRoomId) }); setSelectedRoomId(null) }} className="text-xs text-accent-red hover:text-red-700 underline">删除</button>
+        </div>
+      )}
+
+      {editingNameId && (
+        <div className="flex items-center gap-3 bg-paper border border-border rounded-lg px-4 py-2">
+          <span className="text-sm ink-text">重命名：</span>
+          <input
+            ref={nameInputRef}
+            type="text"
+            defaultValue={canvas.rooms.find(r => r.id === editingNameId)?.name || ''}
+            onBlur={(e) => {
+              const newName = e.target.value.trim()
+              if (newName && editingNameId) {
+                onCanvasChange({ ...canvas, rooms: canvas.rooms.map(r => r.id === editingNameId ? { ...r, name: newName } : r) })
+              }
+              setEditingNameId(null)
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') e.currentTarget.blur()
+              if (e.key === 'Escape') setEditingNameId(null)
+            }}
+            className="px-2 py-1 border border-accent rounded text-sm ink-text bg-white"
+          />
         </div>
       )}
 

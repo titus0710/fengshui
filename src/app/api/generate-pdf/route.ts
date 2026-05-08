@@ -83,8 +83,9 @@ function buildPdfHtml(result: AnalysisResult, messages: ChatMessage[]): string {
 <head>
 <meta charset="UTF-8">
 <style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap');
   @page { size: A4; margin: 20mm; }
-  body { font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; color: #3d3226; background: #fdf6e3; padding: 0; margin: 0; }
+  body { font-family: "Noto Sans SC", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "SimHei", sans-serif; color: #3d3226; background: #fdf6e3; padding: 0; margin: 0; -webkit-font-smoothing: antialiased; }
   .cover { text-align: center; padding: 80px 0 60px; }
   .cover h1 { font-size: 36px; color: #b8860b; letter-spacing: 8px; margin: 0 0 16px; }
   .cover .subtitle { font-size: 18px; color: #6b5d4f; margin: 0 0 40px; }
@@ -95,6 +96,7 @@ function buildPdfHtml(result: AnalysisResult, messages: ChatMessage[]): string {
   table { width: 100%; border-collapse: collapse; margin: 16px 0; }
   th { background: #f5ecd7; padding: 10px; text-align: left; color: #3d3226; }
   .footer { text-align: center; color: #6b5d4f; font-size: 12px; margin-top: 40px; padding-top: 16px; border-top: 1px solid #d4c5a9; }
+  * { -webkit-font-smoothing: antialiased; }
 </style>
 </head>
 <body>

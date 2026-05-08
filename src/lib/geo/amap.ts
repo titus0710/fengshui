@@ -1,4 +1,13 @@
-const AMAP_KEY = process.env.AMAP_SERVICE_KEY
+function isValidAddress(addr: string): boolean {
+  if (!addr || addr.length > 200) return false
+  if (/^https?:\/\//i.test(addr)) return false
+  if (/[<>{}|\\^~[\]]/.test(addr)) return false
+  return true
+}
+
+function getAmapKey(): string | undefined {
+  return process.env.AMAP_SERVICE_KEY?.trim()
+}
 
 export interface GeoData {
   address: string
@@ -32,7 +41,14 @@ export interface TerrainInfo {
 }
 
 async function geocode(address: string): Promise<{ lng: number; lat: number; formattedAddress: string }> {
-  const url = `https://restapi.amap.com/v3/geocode/geo?key=${AMAP_KEY}&address=${encodeURIComponent(address)}`
+  if (!isValidAddress(address)) {
+    throw new Error(`地址格式无效：${address}`)
+  }
+  const amapKey = getAmapKey()
+  if (!amapKey) {
+    throw new Error('未配置 AMAP_SERVICE_KEY 环境变量')
+  }
+  const url = `https://restapi.amap.com/v3/geocode/geo?key=${amapKey}&address=${encodeURIComponent(address)}`
   const res = await fetch(url)
   const data = await res.json()
   if (data.status !== '1' || !data.geocodes?.length) {
@@ -63,9 +79,11 @@ async function searchPOI(
   lng: number, lat: number, typeCode: string, radius: number, keyword?: string
 ): Promise<{ name: string; type: string; distance: number; direction: string; address: string }[]> {
   try {
-    let url = `https://restapi.amap.com/v3/place/around?key=${AMAP_KEY}&location=${lng},${lat}&radius=${radius}&types=${typeCode}&offset=10&extensions=all`
+    const amapKey = getAmapKey()
+    if (!amapKey) return []
+    let url = `https://restapi.amap.com/v3/place/around?key=${amapKey}&location=${lng},${lat}&radius=${radius}&types=${typeCode}&offset=10&extensions=all`
     if (keyword) {
-      url = `https://restapi.amap.com/v3/place/around?key=${AMAP_KEY}&location=${lng},${lat}&radius=${radius}&keywords=${encodeURIComponent(keyword)}&offset=10&extensions=all`
+      url = `https://restapi.amap.com/v3/place/around?key=${amapKey}&location=${lng},${lat}&radius=${radius}&keywords=${encodeURIComponent(keyword)}&offset=10&extensions=all`
     }
     const res = await fetch(url)
     const data = await res.json()
@@ -304,11 +322,14 @@ function assessTerrain(
 }
 
 function getSatelliteUrl(lng: number, lat: number): string {
-  return `https://restapi.amap.com/v3/staticmap?key=${AMAP_KEY}&location=${lng},${lat}&zoom=16&size=800*600&scale=2&markers=mid,,A:${lng},${lat}&hybrid=1`
+  const amapKey = getAmapKey()
+  if (!amapKey) return ''
+  return `https://restapi.amap.com/v3/staticmap?key=${amapKey}&location=${lng},${lat}&zoom=16&size=800*600&scale=2&markers=mid,,A:${lng},${lat}&hybrid=1`
 }
 
 export async function analyzeGeo(address: string): Promise<GeoData> {
-  if (!AMAP_KEY) {
+  const amapKey = getAmapKey()
+  if (!amapKey) {
     return {
       address,
       lng: 0,
