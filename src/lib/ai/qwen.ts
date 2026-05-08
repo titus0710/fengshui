@@ -40,26 +40,16 @@ async function createChatCompletion(params: {
   return data.choices[0]?.message?.content || ''
 }
 
-const FLOORPLAN_SYSTEM_PROMPT = `你是一位专业的建筑图纸分析专家。请仔细分析这张户型图，输出以下 JSON 结构（不要包含任何其他文字）：
+const FLOORPLAN_SYSTEM_PROMPT = `你是一位专业的建筑图纸分析专家。请仔细分析这张户型图，输出以下严格的 JSON 结构：
 
-{
-  "direction": "推断的朝向（如 坐北朝南，如果无法判断请写 未知）",
-  "overall_shape": "描述户型整体形状（如 方正、L型、缺角等）",
-  "rooms": [
-    {
-      "name": "房间名称",
-      "type": "living|bedroom|kitchen|bathroom|balcony|corridor|study|other",
-      "bounds": { "x": 0.1, "y": 0.2, "width": 0.3, "height": 0.4 },
-      "notes": "图中标注的文字，如果有的话"
-    }
-  ]
-}
+{"direction":"坐北朝南","overall_shape":"方正","rooms":[{"name":"客厅","type":"living","bounds":{"x":0.1,"y":0.2,"width":0.3,"height":0.4},"notes":""}]}
 
-注意：
-1. bounds 的 x, y, width, height 是相对于图片尺寸的比例（0-1），以图片左上角为原点
-2. 请识别所有可见房间，包括但不限于客厅、卧室、厨房、卫生间、阳台、走廊、书房等
-3. 如果图中有指北针或方向标注，请据此判断朝向
-4. 只输出 JSON，不要包含任何解释文字`
+重要规则：
+1. bounds 必须是 {"x":数字,"y":数字,"width":数字,"height":数字} 四个属性缺一不可
+2. x,y,width,height 都是相对于图片尺寸的比例（0-1之间）
+3. 只输出 JSON，不要任何解释文字
+
+请分析户型图：`
 
 function fixMalformedJson(str: string): string {
   str = str.replace(/"y":\s*([0-9.]+)\s*,\s*([0-9.]+)\s*,\s*([0-9.]+)\s*([,}])/g, (_, y, w, h, punct) => {
