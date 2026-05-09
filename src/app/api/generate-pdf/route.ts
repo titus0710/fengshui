@@ -205,9 +205,10 @@ function buildPdfHtml(result: AnalysisResult, messages: ChatMessage[]): string {
 <head>
 <meta charset="UTF-8">
 <style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap');
   @page { size: A4; margin: 18mm; }
   body {
-    font-family: "Noto Sans SC", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    font-family: "Noto Sans SC", "WenQuanYi Micro Hei", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "SimHei", sans-serif;
     color: #333;
     background: #fff;
     padding: 0;
