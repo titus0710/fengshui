@@ -1,21 +1,43 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+
+const DISMISS_KEY = 'donate_dismissed_at'
+const COOLDOWN_MS = 5 * 60 * 1000
 
 export default function DonateFloating() {
   const [visible, setVisible] = useState(false)
 
+  const shouldShow = useCallback(() => {
+    if (typeof window === 'undefined') return false
+    const dismissedAt = localStorage.getItem(DISMISS_KEY)
+    if (!dismissedAt) return true
+    return Date.now() - parseInt(dismissedAt, 10) >= COOLDOWN_MS
+  }, [])
+
   useEffect(() => {
-    const dismissed = localStorage.getItem('donate_dismissed')
-    if (!dismissed) {
+    if (shouldShow()) {
       const timer = setTimeout(() => setVisible(true), 2000)
       return () => clearTimeout(timer)
     }
-  }, [])
+
+    const interval = setInterval(() => {
+      if (shouldShow()) {
+        setVisible(true)
+        clearInterval(interval)
+      }
+    }, 30000)
+
+    return () => clearInterval(interval)
+  }, [shouldShow])
 
   const handleClose = () => {
     setVisible(false)
-    localStorage.setItem('donate_dismissed', '1')
+    localStorage.setItem(DISMISS_KEY, String(Date.now()))
+
+    setTimeout(() => {
+      setVisible(true)
+    }, COOLDOWN_MS)
   }
 
   if (!visible) return null
