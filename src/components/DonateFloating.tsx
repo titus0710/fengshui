@@ -32,7 +32,7 @@ export default function DonateFloating() {
         </button>
 
         <p className="text-center text-sm font-bold text-accent mb-3">
-          卦不走空，随缘大赏！
+          卦不走空，随缘打赏！
         </p>
 
         <div className="flex justify-center">
