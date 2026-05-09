@@ -1,3 +1,5 @@
+import { readJsonResponse } from '@/lib/http/json'
+
 const DEEPSEEK_MODEL = 'deepseek-chat'
 
 async function createChatCompletion(params: {
@@ -29,16 +31,15 @@ async function createChatCompletion(params: {
   })
 
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}))
-    throw new Error(`DeepSeek API 错误: ${(err as { error?: { message?: string } }).error?.message || res.statusText}`)
+    await readJsonResponse(res, 'DeepSeek API')
   }
 
   if (params.stream) {
     return res
   }
 
-  const data = await res.json()
-  return { content: data.choices[0]?.message?.content || '' }
+  const data = await readJsonResponse<{ choices?: { message?: { content?: string } }[] }>(res, 'DeepSeek API')
+  return { content: data.choices?.[0]?.message?.content || '' }
 }
 
 const FENGSHUI_SYSTEM_PROMPT = `你是一位精通中国传统玄空风水学的风水大师，精通八卦、九宫飞星、八宅明镜等理论。

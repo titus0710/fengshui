@@ -1,3 +1,5 @@
+import { readJsonResponse } from '@/lib/http/json'
+
 const QWEN_MODEL = 'qwen3-vl-plus'
 
 async function createChatCompletion(params: {
@@ -30,14 +32,11 @@ async function createChatCompletion(params: {
   )
 
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}))
-    throw new Error(
-      `Qwen API 错误: ${(err as { error?: { message?: string } }).error?.message || res.statusText}`
-    )
+    await readJsonResponse(res, 'Qwen API')
   }
 
-  const data = await res.json()
-  return data.choices[0]?.message?.content || ''
+  const data = await readJsonResponse<{ choices?: { message?: { content?: string } }[] }>(res, 'Qwen API')
+  return data.choices?.[0]?.message?.content || ''
 }
 
 const FLOORPLAN_SYSTEM_PROMPT = `你是一位专业的建筑图纸分析专家。请仔细分析这张户型图，输出以下严格的 JSON 结构：
