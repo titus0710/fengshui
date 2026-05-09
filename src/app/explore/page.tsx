@@ -7,6 +7,7 @@ import FloorplanViewer from '@/components/FloorplanViewer'
 import AnalysisPanel from '@/components/AnalysisPanel'
 import PointDetail from '@/components/PointDetail'
 import ChatPanel from '@/components/ChatPanel'
+import DonateFloating from '@/components/DonateFloating'
 
 export default function ExplorePage() {
   const router = useRouter()
@@ -165,6 +166,8 @@ export default function ExplorePage() {
           onClose={() => setSelectedPoint(null)}
         />
       )}
+
+      <DonateFloating />
     </main>
   )
 }
